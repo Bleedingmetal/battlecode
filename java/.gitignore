@@ -123,6 +123,10 @@ local.properties
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+.java/build
+.java/client
+.java/gradle
+.build.gradle
 
 # AWS User-specific
 .idea/**/aws.xml
