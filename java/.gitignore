@@ -127,6 +127,11 @@ local.properties
 .java/client
 .java/gradle
 .build.gradle
+.client_version.txt
+.engine_version.txt
+.gradle.properties
+.gradlew
+.gradlew.bat
 
 # AWS User-specific
 .idea/**/aws.xml
