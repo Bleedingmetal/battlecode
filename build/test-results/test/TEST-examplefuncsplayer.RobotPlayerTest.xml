@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="examplefuncsplayer.RobotPlayerTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2025-01-08T18:45:41" hostname="LIAMS_COMPUTER" time="0.003">
+  <properties/>
+  <testcase name="testSanity" classname="examplefuncsplayer.RobotPlayerTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
