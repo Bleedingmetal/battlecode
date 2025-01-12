@@ -1,4 +1,8 @@
-package test1;
+
+
+
+
+package adiBot;
 
 import battlecode.common.*;
 
@@ -179,6 +183,18 @@ public class RobotPlayer {
         }
     }
 
+    private static boolean isTower(UnitType type) {
+        return type == UnitType.LEVEL_ONE_PAINT_TOWER ||
+                type == UnitType.LEVEL_TWO_PAINT_TOWER ||
+                type == UnitType.LEVEL_THREE_PAINT_TOWER ||
+                type == UnitType.LEVEL_ONE_MONEY_TOWER ||
+                type == UnitType.LEVEL_TWO_MONEY_TOWER ||
+                type == UnitType.LEVEL_THREE_MONEY_TOWER ||
+                type == UnitType.LEVEL_ONE_DEFENSE_TOWER ||
+                type == UnitType.LEVEL_TWO_DEFENSE_TOWER ||
+                type == UnitType.LEVEL_THREE_DEFENSE_TOWER; // how many levels even are there?
+    }
+
     private static void moveToNearestTower(RobotController rc) throws GameActionException {
         // Nearest tower? Go back home to chill or refuel. idrk this is kinda cooked idk wht a unittype tower is i mean i do bit its supposed to work bruh it works in the main but here it dies god help me I will kill this pc
         RobotInfo[] nearbyTowers = rc.senseNearbyRobots(-1, rc.getTeam());
@@ -186,7 +202,7 @@ public class RobotPlayer {
         int minDistance = Integer.MAX_VALUE;
 
         for (RobotInfo robot : nearbyTowers) {
-            if (robot.getType() == UnitType.LEVEL_ONE_PAINT_TOWER ) {
+            if (isTower(robot.getType())) {
                 int distance = rc.getLocation().distanceSquaredTo(robot.location);
                 if (distance < minDistance) {
                     minDistance = distance;
@@ -207,7 +223,7 @@ public class RobotPlayer {
         // Are we still in the squad chat zone or nah?
         RobotInfo[] nearbyTowers = rc.senseNearbyRobots(-1, rc.getTeam());
         for (RobotInfo robot : nearbyTowers) {
-            if (robot.getType() == UnitType.LEVELTOWER && rc.getLocation().isWithinDistanceSquared(robot.location, 20)) {
+            if (isTower(robot.getType()) && rc.getLocation().isWithinDistanceSquared(robot.location, 20)) {
                 return true;
             }
         }
