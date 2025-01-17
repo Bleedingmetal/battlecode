@@ -1,53 +1,28 @@
-
-
-
-
 package adiBot;
 
 import battlecode.common.*;
-
 import java.util.Random;
 
-
-/**
- * Ok so this is like the main place where the code kicks off, pretty much ur basecamp.
- * Every bot type runs this and then splits off to do its own thing. Modular vibes, right?
- */
 public class RobotPlayer {
-    static int turnCount = 0; // Keepin track of how long we've been in the game, like a diary but numbers.
+    static int turnCount = 0;
     static final Random rng = new Random(6147);
-
-
-    static final Direction[] directions = {
-            Direction.NORTH,
-            Direction.NORTHEAST,
-            Direction.EAST,
-            Direction.SOUTHEAST,
-            Direction.SOUTH,
-            Direction.SOUTHWEST,
-            Direction.WEST,
-            Direction.NORTHWEST,
-    };
-
-    // We're aiming to make a V-shaped spread, so these are like the whatver shit idk bruh we gotta fix it
+    static final Direction[] directions = Direction.values();
     static final Direction[] generalDirections = {
             Direction.NORTH, Direction.NORTHEAST, Direction.NORTHWEST
     };
 
-    @SuppressWarnings("unused")
     public static void run(RobotController rc) throws GameActionException {
         while (true) {
             turnCount++;
             try {
-                // Each bot type runs its own strat. Divide and conquer ftw.
                 switch (rc.getType()) {
-                    case SOLDIER: runSoldier(rc); break;
-                    case MOPPER: runMopper(rc); break;
-                    case SPLASHER: runSplasher(rc); break;
-                    default: runTower(rc); break;
+                    case SOLDIER -> runSoldier(rc);
+                    case MOPPER -> runMopper(rc);
+                    case SPLASHER -> runSplasher(rc);
+                    default -> runTower(rc);
                 }
             } catch (Exception e) {
-                System.out.println("Exception"); // Yeah, something borked. Fix it maybe?
+                System.err.println("Exception: " + e.getMessage());
                 e.printStackTrace();
             } finally {
                 Clock.yield();
@@ -56,65 +31,53 @@ public class RobotPlayer {
     }
 
     public static void runTower(RobotController rc) throws GameActionException {
-
         if (rc.isActionReady()) {
-            int round = rc.getRoundNum(); // What phase of the game r we in?
+            int round = rc.getRoundNum();
             Direction dir = directions[rng.nextInt(directions.length)];
             MapLocation nextLoc = rc.getLocation().add(dir);
 
-       // the early strat from the doc but idk why in the game it isnt working
-            if (round < 500) {
-                if (rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
+            if (rc.canSenseLocation(nextLoc) && rc.senseRobotAtLocation(nextLoc) == null) {
+                if (round < 500 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
                     rc.buildRobot(UnitType.SOLDIER, nextLoc);
-                } else if (rc.canBuildRobot(UnitType.MOPPER, nextLoc)) {
-                    rc.buildRobot(UnitType.MOPPER, nextLoc);
-                }
-            } else if (round < 1500) {
-
-                if (rng.nextBoolean() && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
+                } else if (round < 1500) {
+                    if (rng.nextBoolean() && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
+                        rc.buildRobot(UnitType.SPLASHER, nextLoc);
+                    } else if (rc.canBuildRobot(UnitType.MOPPER, nextLoc)) {
+                        rc.buildRobot(UnitType.MOPPER, nextLoc);
+                    }
+                } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                     rc.buildRobot(UnitType.SPLASHER, nextLoc);
-                } else if (rc.canBuildRobot(UnitType.MOPPER, nextLoc)) {
-                    rc.buildRobot(UnitType.MOPPER, nextLoc);
-                }
-            } else {
-                // Late game: full send splashers and moppers for chaos.
-                if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
-                    rc.buildRobot(UnitType.SPLASHER, nextLoc);
-                } else if (rc.canBuildRobot(UnitType.MOPPER, nextLoc)) {
-                    rc.buildRobot(UnitType.MOPPER, nextLoc);
                 }
             }
         }
 
-
         RobotInfo[] nearbyAllies = rc.senseNearbyRobots(-1, rc.getTeam());
         for (RobotInfo ally : nearbyAllies) {
-            if (ally.paintAmount < ally.getType().paintCapacity / 2 && rc.canTransferPaint(ally.location)) {
-                rc.transferPaint(ally.location, ally.getType().getPaintCapacity() / 4);
+            if (ally.paintAmount <= ally.getType().paintCapacity / 2 &&
+                    rc.canTransferPaint(ally.location, ally.getType().paintCapacity / 2)) {
+                rc.transferPaint(ally.location, ally.getType().paintCapacity / 4);
             }
         }
     }
 
     public static void runSoldier(RobotController rc) throws GameActionException {
-
         if (rc.getPaint() < 10) {
             moveToNearestTower(rc);
             return;
         }
 
-
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
         for (MapInfo tile : nearbyTiles) {
-            if (tile.getPaint() != PaintType.ALLY_PRIMARY && rc.canAttack(tile.getMapLocation())) {
-                rc.attack(tile.getMapLocation()); // Boom, tile ours now this doesnt work either I doont get it
+            if (tile.getPaint() != PaintType.ALLY_PRIMARY &&
+                    rc.canAttack(tile.getMapLocation()) &&
+                    rc.getLocation().distanceSquaredTo(tile.getMapLocation()) <= rc.getType().actionRadiusSquared) {
+                rc.attack(tile.getMapLocation());
                 return;
             }
         }
 
-
         Direction generalDir = generalDirections[turnCount % generalDirections.length];
         Direction moveDir = directions[rng.nextInt(directions.length)];
-
         if (rng.nextDouble() < 0.7 && rc.canMove(generalDir)) {
             rc.move(generalDir);
         } else if (rc.canMove(moveDir)) {
@@ -123,36 +86,30 @@ public class RobotPlayer {
     }
 
     public static void runMopper(RobotController rc) throws GameActionException {
-        // Moppers do all the dirty work: enemy wipeout + paint delivery.
         if (rc.getPaint() < 20) {
-            .
             moveToNearestTower(rc);
             return;
         }
 
-        // Priority uno: clean up enemy mess.
         RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         for (RobotInfo enemy : enemies) {
             if (rc.canMopSwing(enemy.location.directionTo(rc.getLocation()))) {
-                rc.mopSwing(enemy.location.directionTo(rc.getLocation())); // Sweep!
+                rc.mopSwing(enemy.location.directionTo(rc.getLocation()));
                 return;
             }
         }
 
-        // If no enemies, do whatver u want ig the code below kept shitting itself coz get paint so its commented out need to fix that (pati I think did it
-        // just need that version
-       RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
+        RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
         for (RobotInfo ally : allies) {
-            if (ally.paintAmount < ally.getType().paintCapacity / 2 && rc.canTransferPaint(ally.location)) {
+            if (ally.paintAmount < ally.getType().paintCapacity &&
+                    rc.canTransferPaint(ally.location, 10)) {
                 rc.transferPaint(ally.location, 10);
                 return;
             }
         }
 
-        // V-move again or check back with the tower for instructions.
         Direction generalDir = generalDirections[turnCount % generalDirections.length];
         Direction moveDir = directions[rng.nextInt(directions.length)];
-
         if (rc.getRoundNum() % 5 == 0 && !isInCommunicationRange(rc)) {
             moveToNearestTower(rc);
         } else if (rng.nextDouble() < 0.7 && rc.canMove(generalDir)) {
@@ -163,19 +120,16 @@ public class RobotPlayer {
     }
 
     public static void runSplasher(RobotController rc) throws GameActionException {
-
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
         for (MapInfo tile : nearbyTiles) {
             if (tile.getPaint() == PaintType.ENEMY_PRIMARY && rc.canAttack(tile.getMapLocation())) {
-                rc.attack(tile.getMapLocation()); // Splat
+                rc.attack(tile.getMapLocation());
                 return;
             }
         }
 
-        // Stick to the V-move plan, go with the flow.
         Direction generalDir = generalDirections[turnCount % generalDirections.length];
         Direction moveDir = directions[rng.nextInt(directions.length)];
-
         if (rng.nextDouble() < 0.7 && rc.canMove(generalDir)) {
             rc.move(generalDir);
         } else if (rc.canMove(moveDir)) {
@@ -184,20 +138,15 @@ public class RobotPlayer {
     }
 
     private static boolean isTower(UnitType type) {
-        return type == UnitType.LEVEL_ONE_PAINT_TOWER ||
-                type == UnitType.LEVEL_TWO_PAINT_TOWER ||
-                type == UnitType.LEVEL_THREE_PAINT_TOWER ||
-                type == UnitType.LEVEL_ONE_MONEY_TOWER ||
-                type == UnitType.LEVEL_TWO_MONEY_TOWER ||
-                type == UnitType.LEVEL_THREE_MONEY_TOWER ||
-                type == UnitType.LEVEL_ONE_DEFENSE_TOWER ||
-                type == UnitType.LEVEL_TWO_DEFENSE_TOWER ||
-                type == UnitType.LEVEL_THREE_DEFENSE_TOWER; // how many levels even are there?
+        return switch (type) {
+            case LEVEL_ONE_PAINT_TOWER, LEVEL_TWO_PAINT_TOWER, LEVEL_THREE_PAINT_TOWER,
+                 LEVEL_ONE_MONEY_TOWER, LEVEL_TWO_MONEY_TOWER, LEVEL_THREE_MONEY_TOWER,
+                 LEVEL_ONE_DEFENSE_TOWER, LEVEL_TWO_DEFENSE_TOWER, LEVEL_THREE_DEFENSE_TOWER -> true;
+            default -> false;
+        };
     }
 
     private static void moveToNearestTower(RobotController rc) throws GameActionException {
-        // Nearest tower? Go back home to chill or refuel. idrk this is kinda cooked idk wht a unittype tower is i mean i do bit its supposed to work bruh it works in the main but here it dies
-        // god help me I will kill this pc
         RobotInfo[] nearbyTowers = rc.senseNearbyRobots(-1, rc.getTeam());
         MapLocation nearestTower = null;
         int minDistance = Integer.MAX_VALUE;
@@ -221,32 +170,13 @@ public class RobotPlayer {
     }
 
     private static boolean isInCommunicationRange(RobotController rc) throws GameActionException {
-        // Are we still in the squad chat zone or nah?
         RobotInfo[] nearbyTowers = rc.senseNearbyRobots(-1, rc.getTeam());
         for (RobotInfo robot : nearbyTowers) {
-            if (isTower(robot.getType()) && rc.getLocation().isWithinDistanceSquared(robot.location, 20)) {
+            if (isTower(robot.getType()) &&
+                    rc.getLocation().isWithinDistanceSquared(robot.location, 20)) {
                 return true;
             }
         }
         return false;
-    }
-
-    // Function to determine the zone based on position its not round based coz idk how to check round without a counter(might do that lowk) but this is what its at rn and these are arbitrary numbers rn
-    private static String getZone(MapLocation loc, int mapWidth, int mapHeight) {
-        int x = loc.x;
-        int y = loc.y;
-
-        // Farthest zone is near the map center
-        MapLocation center = new MapLocation(mapWidth / 2, mapHeight / 2);
-        int distanceToCenter = loc.distanceSquaredTo(center);
-        int distanceToSpawn = loc.distanceSquaredTo(new MapLocation(0, 0));
-
-        if (distanceToSpawn < mapWidth * mapHeight / 10) {
-            return "MONEY"; // Closest zone to spawn
-        } else if (distanceToCenter < mapWidth * mapHeight / 6) {
-            return "DEFENSE"; // Near center zone
-        } else {
-            return "PAINT"; // Middle zone between spawn and center
-        }
     }
 }
