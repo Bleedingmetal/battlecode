@@ -8,13 +8,14 @@ import battlecode.common.*;
 
 import java.util.Random;
 
+
 /**
  * Ok so this is like the main place where the code kicks off, pretty much ur basecamp.
  * Every bot type runs this and then splits off to do its own thing. Modular vibes, right?
  */
 public class RobotPlayer {
     static int turnCount = 0; // Keepin track of how long we've been in the game, like a diary but numbers.
-    static final Random rng = new Random(6147); // Randomizer dude for spice. Predictable for testing tho.
+    static final Random rng = new Random(6147);
 
 
     static final Direction[] directions = {
@@ -28,7 +29,7 @@ public class RobotPlayer {
             Direction.NORTHWEST,
     };
 
-    // We're aiming to make a V-shaped spread, so these are like the whatver shit
+    // We're aiming to make a V-shaped spread, so these are like the whatver shit idk bruh we gotta fix it
     static final Direction[] generalDirections = {
             Direction.NORTH, Direction.NORTHEAST, Direction.NORTHWEST
     };
@@ -36,8 +37,7 @@ public class RobotPlayer {
     @SuppressWarnings("unused")
     public static void run(RobotController rc) throws GameActionException {
         while (true) {
-            turnCount++; // Lol one more turn survived, gg.
-
+            turnCount++;
             try {
                 // Each bot type runs its own strat. Divide and conquer ftw.
                 switch (rc.getType()) {
@@ -50,7 +50,7 @@ public class RobotPlayer {
                 System.out.println("Exception"); // Yeah, something borked. Fix it maybe?
                 e.printStackTrace();
             } finally {
-                Clock.yield(); // Chill till the next turn starts.
+                Clock.yield();
             }
         }
     }
@@ -59,10 +59,10 @@ public class RobotPlayer {
 
         if (rc.isActionReady()) {
             int round = rc.getRoundNum(); // What phase of the game r we in?
-            Direction dir = directions[rng.nextInt(directions.length)]; // Random move idea for fun.
+            Direction dir = directions[rng.nextInt(directions.length)];
             MapLocation nextLoc = rc.getLocation().add(dir);
 
-            // Early game: build basic chill dudes to claim land.
+       // the early strat from the doc but idk why in the game it isnt working
             if (round < 500) {
                 if (rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
                     rc.buildRobot(UnitType.SOLDIER, nextLoc);
@@ -89,7 +89,7 @@ public class RobotPlayer {
 
         RobotInfo[] nearbyAllies = rc.senseNearbyRobots(-1, rc.getTeam());
         for (RobotInfo ally : nearbyAllies) {
-            if (ally.getPaint() < ally.getType().getPaintCapacity() / 2 && rc.canTransferPaint(ally.location)) {
+            if (ally.paintAmount < ally.getType().paintCapacity / 2 && rc.canTransferPaint(ally.location)) {
                 rc.transferPaint(ally.location, ally.getType().getPaintCapacity() / 4);
             }
         }
@@ -98,7 +98,6 @@ public class RobotPlayer {
     public static void runSoldier(RobotController rc) throws GameActionException {
 
         if (rc.getPaint() < 10) {
-            // Outta paint? Run back to mommy (aka tower).
             moveToNearestTower(rc);
             return;
         }
@@ -107,7 +106,7 @@ public class RobotPlayer {
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
         for (MapInfo tile : nearbyTiles) {
             if (tile.getPaint() != PaintType.ALLY_PRIMARY && rc.canAttack(tile.getMapLocation())) {
-                rc.attack(tile.getMapLocation()); // Boom, tile ours now.
+                rc.attack(tile.getMapLocation()); // Boom, tile ours now this doesnt work either I doont get it
                 return;
             }
         }
@@ -140,10 +139,11 @@ public class RobotPlayer {
             }
         }
 
-        // If no enemies, do whatver u want ig
-        RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
+        // If no enemies, do whatver u want ig the code below kept shitting itself coz get paint so its commented out need to fix that (pati I think did it
+        // just need that version
+       RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
         for (RobotInfo ally : allies) {
-            if (ally.getPaint() < ally.getType().getPaintCapacity() / 2 && rc.canTransferPaint(ally.location)) {
+            if (ally.paintAmount < ally.getType().paintCapacity / 2 && rc.canTransferPaint(ally.location)) {
                 rc.transferPaint(ally.location, 10);
                 return;
             }
@@ -163,7 +163,7 @@ public class RobotPlayer {
     }
 
     public static void runSplasher(RobotController rc) throws GameActionException {
-        // Splashers just go ham on contested zones.
+
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
         for (MapInfo tile : nearbyTiles) {
             if (tile.getPaint() == PaintType.ENEMY_PRIMARY && rc.canAttack(tile.getMapLocation())) {
@@ -196,7 +196,8 @@ public class RobotPlayer {
     }
 
     private static void moveToNearestTower(RobotController rc) throws GameActionException {
-        // Nearest tower? Go back home to chill or refuel. idrk this is kinda cooked idk wht a unittype tower is i mean i do bit its supposed to work bruh it works in the main but here it dies god help me I will kill this pc
+        // Nearest tower? Go back home to chill or refuel. idrk this is kinda cooked idk wht a unittype tower is i mean i do bit its supposed to work bruh it works in the main but here it dies
+        // god help me I will kill this pc
         RobotInfo[] nearbyTowers = rc.senseNearbyRobots(-1, rc.getTeam());
         MapLocation nearestTower = null;
         int minDistance = Integer.MAX_VALUE;
