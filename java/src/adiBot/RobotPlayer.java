@@ -38,8 +38,11 @@ public class RobotPlayer {
 
             if (rc.canSenseLocation(nextLoc) && rc.senseRobotAtLocation(nextLoc) == null) {
                 if (round < 500 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
-                    rc.buildRobot(UnitType.SOLDIER, nextLoc);
-                    rc.buildRobot(UnitType.SPLASHER, nextLoc);
+                    if (rng.nextBoolean() && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
+                        rc.buildRobot(UnitType.SOLDIER, nextLoc);
+                    } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
+                        rc.buildRobot(UnitType.SPLASHER, nextLoc);
+                    }
                 } else if (round < 1500) {
                     if (rng.nextBoolean() && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
