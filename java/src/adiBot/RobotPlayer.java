@@ -37,14 +37,16 @@ public class RobotPlayer {
             MapLocation nextLoc = rc.getLocation().add(dir);
 
             if (rc.canSenseLocation(nextLoc) && rc.senseRobotAtLocation(nextLoc) == null) {
-                if (round < 500 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
-                    if (rng.nextBoolean() && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
+                if (round < 500) {
+                    // 60:40 bias towards Soldiers early game
+                    if (rng.nextDouble() < 0.6 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
                         rc.buildRobot(UnitType.SOLDIER, nextLoc);
                     } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
                     }
                 } else if (round < 1500) {
-                    if (rng.nextBoolean() && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
+                    // 60:40 bias towards Splashers mid-game
+                    if (rng.nextDouble() < 0.6 && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
                     } else if (rc.canBuildRobot(UnitType.MOPPER, nextLoc)) {
                         rc.buildRobot(UnitType.MOPPER, nextLoc);
