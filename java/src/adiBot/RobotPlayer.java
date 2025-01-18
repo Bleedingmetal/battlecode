@@ -7,7 +7,7 @@ public class RobotPlayer {
     static int turnCount = 0;
     static final Random rng = new Random(6147);
     static final Direction[] directions = Direction.values();
-    static final Direction[] generalDirections = {
+    static final Direction[] generalDirections = { // TODO Doesn't work if spawn on top; need to figure out where you are first
             Direction.NORTH, Direction.NORTHEAST, Direction.NORTHWEST
     };
 
@@ -39,6 +39,7 @@ public class RobotPlayer {
             if (rc.canSenseLocation(nextLoc) && rc.senseRobotAtLocation(nextLoc) == null) {
                 if (round < 500 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
                     rc.buildRobot(UnitType.SOLDIER, nextLoc);
+                    rc.buildRobot(UnitType.SPLASHER, nextLoc);
                 } else if (round < 1500) {
                     if (rng.nextBoolean() && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
