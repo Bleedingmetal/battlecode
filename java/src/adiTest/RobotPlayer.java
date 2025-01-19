@@ -142,13 +142,7 @@ public class RobotPlayer {
         UnitType[] towerTypes = {
                 UnitType.LEVEL_ONE_PAINT_TOWER,
                 UnitType.LEVEL_ONE_MONEY_TOWER,
-                UnitType.LEVEL_ONE_DEFENSE_TOWER,
-                UnitType.LEVEL_TWO_PAINT_TOWER,
-                UnitType.LEVEL_TWO_MONEY_TOWER,
-                UnitType.LEVEL_TWO_DEFENSE_TOWER,
-                UnitType.LEVEL_THREE_PAINT_TOWER,
-                UnitType.LEVEL_THREE_MONEY_TOWER,
-                UnitType.LEVEL_THREE_DEFENSE_TOWER
+                UnitType.LEVEL_ONE_DEFENSE_TOWER
         };
 
         for (UnitType towerType : towerTypes) {
@@ -209,31 +203,40 @@ public class RobotPlayer {
         MapLocation myLocation = rc.getLocation();
         int mapWidth = rc.getMapWidth();
         int mapHeight = rc.getMapHeight();
-
-        // Create a Random object for 50/50 decision
         Random rand = new Random();
 
         // Middle bottom: move top-left and top-right
         if (myLocation.x == mapWidth / 2 && myLocation.y == mapHeight - 1) {
-            // Randomly choose between NORTHWEST and NORTHEAST
             return rand.nextBoolean() ? Direction.NORTHWEST : Direction.NORTHEAST;
         }
         // Middle top: move bottom-left and bottom-right
         else if (myLocation.x == mapWidth / 2 && myLocation.y == 0) {
-            // Randomly choose between SOUTHWEST and SOUTHEAST
             return rand.nextBoolean() ? Direction.SOUTHWEST : Direction.SOUTHEAST;
         }
         // Middle left: move top-right and bottom-right
         else if (myLocation.x == 0 && myLocation.y == mapHeight / 2) {
-            // Randomly choose between NORTHEAST and SOUTHEAST
             return rand.nextBoolean() ? Direction.NORTHEAST : Direction.SOUTHEAST;
         }
         // Middle right: move top-left and bottom-left
         else if (myLocation.x == mapWidth - 1 && myLocation.y == mapHeight / 2) {
-            // Randomly choose between NORTHWEST and SOUTHWEST
             return rand.nextBoolean() ? Direction.NORTHWEST : Direction.SOUTHWEST;
         }
 
+        // Ricochet logic for map boundaries
+        if (myLocation.x == 0) { // Left edge
+            return rand.nextBoolean() ? Direction.NORTHEAST : Direction.SOUTHEAST;
+        }
+        if (myLocation.x == mapWidth - 1) { // Right edge
+            return rand.nextBoolean() ? Direction.NORTHWEST : Direction.SOUTHWEST;
+        }
+        if (myLocation.y == 0) { // Top edge
+            return rand.nextBoolean() ? Direction.SOUTHEAST : Direction.SOUTHWEST;
+        }
+        if (myLocation.y == mapHeight - 1) { // Bottom edge
+            return rand.nextBoolean() ? Direction.NORTHEAST : Direction.NORTHWEST;
+        }
+
+        // General movement (in case the bot is not at the boundary)
         Direction[] directions = Direction.values();
         return directions[rand.nextInt(directions.length)];
     }
