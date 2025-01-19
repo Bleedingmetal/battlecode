@@ -142,7 +142,13 @@ public class RobotPlayer {
         UnitType[] towerTypes = {
                 UnitType.LEVEL_ONE_PAINT_TOWER,
                 UnitType.LEVEL_ONE_MONEY_TOWER,
-                UnitType.LEVEL_ONE_DEFENSE_TOWER
+                UnitType.LEVEL_ONE_DEFENSE_TOWER,
+                UnitType.LEVEL_TWO_PAINT_TOWER,
+                UnitType.LEVEL_TWO_MONEY_TOWER,
+                UnitType.LEVEL_TWO_DEFENSE_TOWER,
+                UnitType.LEVEL_THREE_PAINT_TOWER,
+                UnitType.LEVEL_THREE_MONEY_TOWER,
+                UnitType.LEVEL_THREE_DEFENSE_TOWER
         };
 
         for (UnitType towerType : towerTypes) {
@@ -231,5 +237,4 @@ public class RobotPlayer {
         Direction[] directions = Direction.values();
         return directions[rand.nextInt(directions.length)];
     }
-
 }
