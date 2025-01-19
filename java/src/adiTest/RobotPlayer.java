@@ -201,10 +201,35 @@ public class RobotPlayer {
 
     private static Direction getVShapeDirection(RobotController rc) {
         MapLocation myLocation = rc.getLocation();
-        if (myLocation.x < rc.getMapWidth() / 2) {
-            return Direction.SOUTHEAST;
-        } else {
-            return Direction.SOUTHWEST;
+        int mapWidth = rc.getMapWidth();
+        int mapHeight = rc.getMapHeight();
+
+        // Create a Random object for 50/50 decision
+        Random rand = new Random();
+
+        // Middle bottom: move top-left and top-right
+        if (myLocation.x == mapWidth / 2 && myLocation.y == mapHeight - 1) {
+            // Randomly choose between NORTHWEST and NORTHEAST
+            return rand.nextBoolean() ? Direction.NORTHWEST : Direction.NORTHEAST;
         }
+        // Middle top: move bottom-left and bottom-right
+        else if (myLocation.x == mapWidth / 2 && myLocation.y == 0) {
+            // Randomly choose between SOUTHWEST and SOUTHEAST
+            return rand.nextBoolean() ? Direction.SOUTHWEST : Direction.SOUTHEAST;
+        }
+        // Middle left: move top-right and bottom-right
+        else if (myLocation.x == 0 && myLocation.y == mapHeight / 2) {
+            // Randomly choose between NORTHEAST and SOUTHEAST
+            return rand.nextBoolean() ? Direction.NORTHEAST : Direction.SOUTHEAST;
+        }
+        // Middle right: move top-left and bottom-left
+        else if (myLocation.x == mapWidth - 1 && myLocation.y == mapHeight / 2) {
+            // Randomly choose between NORTHWEST and SOUTHWEST
+            return rand.nextBoolean() ? Direction.NORTHWEST : Direction.SOUTHWEST;
+        }
+
+        Direction[] directions = Direction.values();
+        return directions[rand.nextInt(directions.length)];
     }
+
 }
