@@ -1,6 +1,6 @@
 package adiTest;
-import battlecode.common.*;
 
+import battlecode.common.*;
 import java.util.Random;
 
 public class RobotPlayer {
@@ -67,11 +67,6 @@ public class RobotPlayer {
     }
 
     public static void runSoldier(RobotController rc) throws GameActionException {
-        if (rc.getPaint() < 10) {
-            moveToNearestTower(rc);
-            return;
-        }
-
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
         for (MapInfo tile : nearbyTiles) {
             if (tile.getPaint() != PaintType.ALLY_PRIMARY &&
@@ -82,11 +77,8 @@ public class RobotPlayer {
             }
         }
 
-        Direction generalDir = generalDirections[turnCount % generalDirections.length];
-        Direction moveDir = directions[rng.nextInt(directions.length)];
-        if (rng.nextDouble() < 0.7 && rc.canMove(generalDir)) {
-            rc.move(generalDir);
-        } else if (rc.canMove(moveDir)) {
+        Direction moveDir = getVShapeDirection(rc);
+        if (rc.canMove(moveDir)) {
             rc.move(moveDir);
         }
 
@@ -116,13 +108,8 @@ public class RobotPlayer {
             }
         }
 
-        Direction generalDir = generalDirections[turnCount % generalDirections.length];
-        Direction moveDir = directions[rng.nextInt(directions.length)];
-        if (rc.getRoundNum() % 5 == 0 && !isInCommunicationRange(rc)) {
-            moveToNearestTower(rc);
-        } else if (rng.nextDouble() < 0.7 && rc.canMove(generalDir)) {
-            rc.move(generalDir);
-        } else if (rc.canMove(moveDir)) {
+        Direction moveDir = getVShapeDirection(rc);
+        if (rc.canMove(moveDir)) {
             rc.move(moveDir);
         }
 
@@ -132,17 +119,16 @@ public class RobotPlayer {
     public static void runSplasher(RobotController rc) throws GameActionException {
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
         for (MapInfo tile : nearbyTiles) {
-            if (tile.getPaint() == PaintType.ENEMY_PRIMARY && rc.canAttack(tile.getMapLocation())) {
+            if (tile.getPaint() != PaintType.ALLY_PRIMARY &&
+                    rc.canAttack(tile.getMapLocation()) &&
+                    rc.getLocation().distanceSquaredTo(tile.getMapLocation()) <= rc.getType().actionRadiusSquared) {
                 rc.attack(tile.getMapLocation());
                 return;
             }
         }
 
-        Direction generalDir = generalDirections[turnCount % generalDirections.length];
-        Direction moveDir = directions[rng.nextInt(directions.length)];
-        if (rng.nextDouble() < 0.7 && rc.canMove(generalDir)) {
-            rc.move(generalDir);
-        } else if (rc.canMove(moveDir)) {
+        Direction moveDir = getVShapeDirection(rc);
+        if (rc.canMove(moveDir)) {
             rc.move(moveDir);
         }
 
@@ -213,14 +199,12 @@ public class RobotPlayer {
         }
     }
 
-    private static boolean isInCommunicationRange(RobotController rc) throws GameActionException {
-        RobotInfo[] nearbyTowers = rc.senseNearbyRobots(-1, rc.getTeam());
-        for (RobotInfo robot : nearbyTowers) {
-            if (isTower(robot.getType()) &&
-                    rc.getLocation().isWithinDistanceSquared(robot.location, 20)) {
-                return true;
-            }
+    private static Direction getVShapeDirection(RobotController rc) {
+        MapLocation myLocation = rc.getLocation();
+        if (myLocation.x < rc.getMapWidth() / 2) {
+            return Direction.SOUTHEAST;
+        } else {
+            return Direction.SOUTHWEST;
         }
-        return false;
     }
 }

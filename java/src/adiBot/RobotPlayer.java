@@ -107,8 +107,7 @@ public class RobotPlayer {
 
         RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
         for (RobotInfo ally : allies) {
-            if (ally.paintAmount < ally.getType().paintCapacity &&
-                    rc.canTransferPaint(ally.location, 10)) {
+            if (ally.paintAmount < ally.getType().paintCapacity && rc.canTransferPaint(ally.location, 10)) {
                 rc.transferPaint(ally.location, 10);
                 return;
             }
