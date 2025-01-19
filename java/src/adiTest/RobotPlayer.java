@@ -1,16 +1,18 @@
-package adiBot;
-
+package adiTest;
 import battlecode.common.*;
+
 import java.util.Random;
 
 public class RobotPlayer {
     static int turnCount = 0;
     static final Random rng = new Random(6147);
     static final Direction[] directions = Direction.values();
-    static final Direction[] generalDirections = { // TODO Doesn't work if spawn on top; need to figure out where you are first
-            Direction.NORTH, Direction.NORTHEAST, Direction.NORTHWEST
+    static final Direction[] generalDirections = {
+            Direction.NORTH, Direction.NORTHEAST, Direction.NORTHWEST,
+            Direction.EAST, Direction.SOUTHEAST, Direction.SOUTHWEST,
+            Direction.SOUTH, Direction.WEST
     };
- // TODO if can paint then paint why is it not doing that the robots dont seem to be painting on the way to wherever they are headed and that seems to be an issue
+
     public static void run(RobotController rc) throws GameActionException {
         while (true) {
             turnCount++;
@@ -38,14 +40,12 @@ public class RobotPlayer {
 
             if (rc.canSenseLocation(nextLoc) && rc.senseRobotAtLocation(nextLoc) == null) {
                 if (round < 500) {
-                    // 60:40 bias towards Soldiers early game
                     if (rng.nextDouble() < 0.6 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
                         rc.buildRobot(UnitType.SOLDIER, nextLoc);
                     } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
                     }
                 } else if (round < 1500) {
-                    // 60:40 bias towards Splashers mid-game
                     if (rng.nextDouble() < 0.6 && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
                     } else if (rc.canBuildRobot(UnitType.MOPPER, nextLoc)) {
@@ -89,6 +89,8 @@ public class RobotPlayer {
         } else if (rc.canMove(moveDir)) {
             rc.move(moveDir);
         }
+
+        tryBuildOrUpgradeTower(rc);
     }
 
     public static void runMopper(RobotController rc) throws GameActionException {
@@ -123,6 +125,8 @@ public class RobotPlayer {
         } else if (rc.canMove(moveDir)) {
             rc.move(moveDir);
         }
+
+        tryBuildOrUpgradeTower(rc);
     }
 
     public static void runSplasher(RobotController rc) throws GameActionException {
@@ -140,6 +144,40 @@ public class RobotPlayer {
             rc.move(generalDir);
         } else if (rc.canMove(moveDir)) {
             rc.move(moveDir);
+        }
+
+        tryBuildOrUpgradeTower(rc);
+    }
+
+    private static void tryBuildOrUpgradeTower(RobotController rc) throws GameActionException {
+        if (!rc.isActionReady()) return;
+
+        MapLocation myLocation = rc.getLocation();
+        UnitType[] towerTypes = {
+                UnitType.LEVEL_ONE_PAINT_TOWER,
+                UnitType.LEVEL_ONE_MONEY_TOWER,
+                UnitType.LEVEL_ONE_DEFENSE_TOWER
+        };
+
+        for (UnitType towerType : towerTypes) {
+            if (rc.canMarkTowerPattern(towerType, myLocation)) {
+                rc.markTowerPattern(towerType, myLocation);
+                System.out.println("Marking pattern for " + towerType + " at " + myLocation);
+                return;
+            }
+        }
+
+        if (rc.getPaint() >= 10) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -2; dy <= 2; dy++) {
+                    MapLocation loc = new MapLocation(myLocation.x + dx, myLocation.y + dy);
+                    if (rc.canMarkResourcePattern(loc)) {
+                        rc.markResourcePattern(loc);
+                        System.out.println("Marked SRP at " + loc);
+                        return;
+                    }
+                }
+            }
         }
     }
 
