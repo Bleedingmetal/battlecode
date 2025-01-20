@@ -1,4 +1,4 @@
-package adiBot;
+package adiTest;
 
 import battlecode.common.*;
 import java.util.Random;
@@ -7,8 +7,10 @@ public class RobotPlayer {
     static int turnCount = 0;
     static final Random rng = new Random(6147);
     static final Direction[] directions = Direction.values();
-    static final Direction[] generalDirections = { // TODO Doesn't work if spawn on top; need to figure out where you are first
-            Direction.NORTH, Direction.NORTHEAST, Direction.NORTHWEST
+    static final Direction[] generalDirections = {
+            Direction.NORTH, Direction.NORTHEAST, Direction.NORTHWEST,
+            Direction.EAST, Direction.SOUTHEAST, Direction.SOUTHWEST,
+            Direction.SOUTH, Direction.WEST
     };
 
     public static void run(RobotController rc) throws GameActionException {
@@ -38,19 +40,19 @@ public class RobotPlayer {
 
             if (rc.canSenseLocation(nextLoc) && rc.senseRobotAtLocation(nextLoc) == null) {
                 if (round < 500) {
-                    // 60:40 bias towards Soldiers early game
-                    if (rng.nextDouble() < 0.6 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
+                    if (rng.nextDouble() < 0.6&& rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
                         rc.buildRobot(UnitType.SOLDIER, nextLoc);
                     } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
                     }
                 } else if (round < 1500) {
-                    // 60:40 bias towards Splashers mid-game
                     if (rng.nextDouble() < 0.6 && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
                     } else if (rc.canBuildRobot(UnitType.MOPPER, nextLoc)) {
                         rc.buildRobot(UnitType.MOPPER, nextLoc);
                     }
+                } else if (rng.nextDouble() < 0.15 && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
+                    rc.buildRobot(UnitType.SPLASHER, nextLoc);
                 } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                     rc.buildRobot(UnitType.SPLASHER, nextLoc);
                 }
@@ -67,26 +69,17 @@ public class RobotPlayer {
     }
 
     public static void runSoldier(RobotController rc) throws GameActionException {
-        if (rc.getPaint() < 10) {
-            moveToNearestTower(rc);
-            return;
-        }
-
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
-        for (MapInfo tile : nearbyTiles) {
-            if (tile.getPaint() != PaintType.ALLY_PRIMARY &&
-                    rc.canAttack(tile.getMapLocation()) &&
-                    rc.getLocation().distanceSquaredTo(tile.getMapLocation()) <= rc.getType().actionRadiusSquared) {
-                rc.attack(tile.getMapLocation());
-                return;
-            }
+        MapInfo currentTile = rc.senseMapInfo(rc.getLocation());
+        if (!currentTile.getPaint().isAlly() && rc.canAttack(rc.getLocation())) {
+            rc.attack(rc.getLocation());
         }
 
-        Direction generalDir = generalDirections[turnCount % generalDirections.length];
-        Direction moveDir = directions[rng.nextInt(directions.length)];
-        if (rng.nextDouble() < 0.7 && rc.canMove(generalDir)) {
-            rc.move(generalDir);
-        } else if (rc.canMove(moveDir)) {
+        Direction moveDir = getVShapeDirection(rc);
+        if (turnCount % 6 == 0) {
+            moveDir = getSweepDirection(rc); // Alternate to sweeping every 6th round
+        }
+        if (rc.canMove(moveDir)) {
             rc.move(moveDir);
         }
     }
@@ -94,7 +87,6 @@ public class RobotPlayer {
     public static void runMopper(RobotController rc) throws GameActionException {
         if (rc.getPaint() < 20) {
             moveToNearestTower(rc);
-            return;
         }
 
         RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
@@ -114,42 +106,29 @@ public class RobotPlayer {
             }
         }
 
-        Direction generalDir = generalDirections[turnCount % generalDirections.length];
-        Direction moveDir = directions[rng.nextInt(directions.length)];
-        if (rc.getRoundNum() % 5 == 0 && !isInCommunicationRange(rc)) {
-            moveToNearestTower(rc);
-        } else if (rng.nextDouble() < 0.7 && rc.canMove(generalDir)) {
-            rc.move(generalDir);
-        } else if (rc.canMove(moveDir)) {
+        Direction moveDir = getVShapeDirection(rc);
+        if (turnCount % 6 == 0) {
+            moveDir = getSweepDirection(rc); // Alternate to sweeping every 6th round
+        }
+        if (rc.canMove(moveDir)) {
             rc.move(moveDir);
         }
     }
 
     public static void runSplasher(RobotController rc) throws GameActionException {
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
-        for (MapInfo tile : nearbyTiles) {
-            if (tile.getPaint() == PaintType.ENEMY_PRIMARY && rc.canAttack(tile.getMapLocation())) {
-                rc.attack(tile.getMapLocation());
-                return;
-            }
+        MapInfo currentTile = rc.senseMapInfo(rc.getLocation());
+        if (!currentTile.getPaint().isAlly() && rc.canAttack(rc.getLocation())) {
+            rc.attack(rc.getLocation());
         }
 
-        Direction generalDir = generalDirections[turnCount % generalDirections.length];
-        Direction moveDir = directions[rng.nextInt(directions.length)];
-        if (rng.nextDouble() < 0.7 && rc.canMove(generalDir)) {
-            rc.move(generalDir);
-        } else if (rc.canMove(moveDir)) {
+        Direction moveDir = getVShapeDirection(rc);
+        if (turnCount % 6 == 0) {
+            moveDir = getSweepDirection(rc); // Alternate to sweeping every 6th round
+        }
+        if (rc.canMove(moveDir)) {
             rc.move(moveDir);
         }
-    }
-
-    private static boolean isTower(UnitType type) {
-        return switch (type) {
-            case LEVEL_ONE_PAINT_TOWER, LEVEL_TWO_PAINT_TOWER, LEVEL_THREE_PAINT_TOWER,
-                 LEVEL_ONE_MONEY_TOWER, LEVEL_TWO_MONEY_TOWER, LEVEL_THREE_MONEY_TOWER,
-                 LEVEL_ONE_DEFENSE_TOWER, LEVEL_TWO_DEFENSE_TOWER, LEVEL_THREE_DEFENSE_TOWER -> true;
-            default -> false;
-        };
     }
 
     private static void moveToNearestTower(RobotController rc) throws GameActionException {
@@ -175,14 +154,54 @@ public class RobotPlayer {
         }
     }
 
-    private static boolean isInCommunicationRange(RobotController rc) throws GameActionException {
-        RobotInfo[] nearbyTowers = rc.senseNearbyRobots(-1, rc.getTeam());
-        for (RobotInfo robot : nearbyTowers) {
-            if (isTower(robot.getType()) &&
-                    rc.getLocation().isWithinDistanceSquared(robot.location, 20)) {
-                return true;
-            }
+    private static boolean isTower(UnitType type) {
+        return switch (type) {
+            case LEVEL_ONE_PAINT_TOWER, LEVEL_TWO_PAINT_TOWER, LEVEL_THREE_PAINT_TOWER,
+                 LEVEL_ONE_MONEY_TOWER, LEVEL_TWO_MONEY_TOWER, LEVEL_THREE_MONEY_TOWER,
+                 LEVEL_ONE_DEFENSE_TOWER, LEVEL_TWO_DEFENSE_TOWER, LEVEL_THREE_DEFENSE_TOWER -> true;
+            default -> false;
+        };
+    }
+
+    private static Direction getVShapeDirection(RobotController rc) {
+        MapLocation myLocation = rc.getLocation();
+        int mapWidth = rc.getMapWidth();
+        int mapHeight = rc.getMapHeight();
+        Random rand = new Random();
+
+        // Middle bottom: move top-left and top-right
+        if (myLocation.x == mapWidth / 2 && myLocation.y == mapHeight - 1) {
+            return rand.nextBoolean() ? Direction.NORTHWEST : Direction.NORTHEAST;
         }
-        return false;
+        // Middle top: move bottom-left and bottom-right
+        else if (myLocation.x == mapWidth / 2 && myLocation.y == 0) {
+            return rand.nextBoolean() ? Direction.SOUTHWEST : Direction.SOUTHEAST;
+        }
+        // Middle left: move top-right and bottom-right
+        else if (myLocation.x == 0 && myLocation.y == mapHeight / 2) {
+            return rand.nextBoolean() ? Direction.NORTHEAST : Direction.SOUTHEAST;
+        }
+        // Middle right: move top-left and bottom-left
+        else if (myLocation.x == mapWidth - 1 && myLocation.y == mapHeight / 2) {
+            return rand.nextBoolean() ? Direction.NORTHWEST : Direction.SOUTHWEST;
+        }
+
+        // Fallback: Random direction
+        return directions[rand.nextInt(directions.length)];
+    }
+
+    private static Direction getSweepDirection(RobotController rc) {
+        MapLocation myLocation = rc.getLocation();
+        int mapWidth = rc.getMapWidth();
+        int mapHeight = rc.getMapHeight();
+
+        // Determine sweeping based on spawn area
+        if (myLocation.x == mapWidth / 2) {
+            return rng.nextBoolean() ? Direction.EAST : Direction.WEST;
+        } else if (myLocation.y == mapHeight / 2) {
+            return rng.nextBoolean() ? Direction.NORTH : Direction.SOUTH;
+        }
+
+        return directions[rng.nextInt(directions.length)]; // Random fallback
     }
 }
