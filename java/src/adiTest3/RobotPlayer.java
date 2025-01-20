@@ -70,13 +70,9 @@ public class RobotPlayer {
 
     public static void runSoldier(RobotController rc) throws GameActionException {
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
-        for (MapInfo tile : nearbyTiles) {
-            if (tile.getPaint() != PaintType.ALLY_PRIMARY &&
-                    rc.canAttack(tile.getMapLocation()) &&
-                    rc.getLocation().distanceSquaredTo(tile.getMapLocation()) <= rc.getType().actionRadiusSquared) {
-                rc.attack(tile.getMapLocation());
-                return;
-            }
+        MapInfo currentTile = rc.senseMapInfo(rc.getLocation());
+        if (!currentTile.getPaint().isAlly() && rc.canAttack(rc.getLocation())) {
+            rc.attack(rc.getLocation());
         }
 
         Direction moveDir = getVShapeDirection(rc);
@@ -91,7 +87,6 @@ public class RobotPlayer {
     public static void runMopper(RobotController rc) throws GameActionException {
         if (rc.getPaint() < 20) {
             moveToNearestTower(rc);
-            return;
         }
 
         RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
@@ -122,13 +117,9 @@ public class RobotPlayer {
 
     public static void runSplasher(RobotController rc) throws GameActionException {
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
-        for (MapInfo tile : nearbyTiles) {
-            if (tile.getPaint() != PaintType.ALLY_PRIMARY &&
-                    rc.canAttack(tile.getMapLocation()) &&
-                    rc.getLocation().distanceSquaredTo(tile.getMapLocation()) <= rc.getType().actionRadiusSquared) {
-                rc.attack(tile.getMapLocation());
-                return;
-            }
+        MapInfo currentTile = rc.senseMapInfo(rc.getLocation());
+        if (!currentTile.getPaint().isAlly() && rc.canAttack(rc.getLocation())) {
+            rc.attack(rc.getLocation());
         }
 
         Direction moveDir = getVShapeDirection(rc);
