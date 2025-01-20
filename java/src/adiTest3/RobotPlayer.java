@@ -1,4 +1,4 @@
-package adiTest2;
+package adiTest3;
 
 import battlecode.common.*;
 import java.util.Random;
@@ -40,7 +40,7 @@ public class RobotPlayer {
 
             if (rc.canSenseLocation(nextLoc) && rc.senseRobotAtLocation(nextLoc) == null) {
                 if (round < 500) {
-                    if (rng.nextDouble() < 0.6&& rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
+                    if (rng.nextDouble() < 0.6 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
                         rc.buildRobot(UnitType.SOLDIER, nextLoc);
                     } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
