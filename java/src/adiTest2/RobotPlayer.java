@@ -1,17 +1,12 @@
 package adiTest2;
 
 import battlecode.common.*;
-import java.util.Random;
+import java.util.*;
 
 public class RobotPlayer {
     static int turnCount = 0;
     static final Random rng = new Random(6147);
     static final Direction[] directions = Direction.values();
-    static final Direction[] generalDirections = {
-            Direction.NORTH, Direction.NORTHEAST, Direction.NORTHWEST,
-            Direction.EAST, Direction.SOUTHEAST, Direction.SOUTHWEST,
-            Direction.SOUTH, Direction.WEST
-    };
 
     public static void run(RobotController rc) throws GameActionException {
         while (true) {
@@ -40,19 +35,17 @@ public class RobotPlayer {
 
             if (rc.canSenseLocation(nextLoc) && rc.senseRobotAtLocation(nextLoc) == null) {
                 if (round < 500) {
-                    if (rng.nextDouble() < 0.6&& rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
+                    if (rng.nextDouble() < 0.6 && rc.canBuildRobot(UnitType.SOLDIER, nextLoc)) {
                         rc.buildRobot(UnitType.SOLDIER, nextLoc);
                     } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
                     }
-                } else if (round < 1500) {
+                } else if (round < 1000) {
                     if (rng.nextDouble() < 0.6 && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
                     } else if (rc.canBuildRobot(UnitType.MOPPER, nextLoc)) {
                         rc.buildRobot(UnitType.MOPPER, nextLoc);
                     }
-                } else if (rng.nextDouble() < 0.15 && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
-                    rc.buildRobot(UnitType.SPLASHER, nextLoc);
                 } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                     rc.buildRobot(UnitType.SPLASHER, nextLoc);
                 }
@@ -69,26 +62,35 @@ public class RobotPlayer {
     }
 
     public static void runSoldier(RobotController rc) throws GameActionException {
-        MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
+        Direction moveDir = getVShapeDirection(rc);
+
+        if (!rc.canMove(moveDir)) {
+            moveDir = getWallFollowDirection(rc, moveDir);
+        }
+
+        if (rc.canMove(moveDir)) {
+            rc.move(moveDir);
+        }
+
+        // Mark or attack tiles for further exploration
         MapInfo currentTile = rc.senseMapInfo(rc.getLocation());
         if (!currentTile.getPaint().isAlly() && rc.canAttack(rc.getLocation())) {
             rc.attack(rc.getLocation());
         }
-
-        Direction moveDir = getVShapeDirection(rc);
-        if (turnCount % 6 == 0) {
-            moveDir = getSweepDirection(rc); // Alternate to sweeping every 6th round
-        }
-        if (rc.canMove(moveDir)) {
-            rc.move(moveDir);
-        }
     }
 
     public static void runMopper(RobotController rc) throws GameActionException {
-        if (rc.getPaint() < 20) {
-            moveToNearestTower(rc);
+        Direction moveDir = getVShapeDirection(rc);
+
+        if (!rc.canMove(moveDir)) {
+            moveDir = getWallFollowDirection(rc, moveDir);
         }
 
+        if (rc.canMove(moveDir)) {
+            rc.move(moveDir);
+        }
+
+        // Mopping logic
         RobotInfo[] enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
         for (RobotInfo enemy : enemies) {
             if (rc.canMopSwing(enemy.location.directionTo(rc.getLocation()))) {
@@ -96,112 +98,88 @@ public class RobotPlayer {
                 return;
             }
         }
-
-        RobotInfo[] allies = rc.senseNearbyRobots(-1, rc.getTeam());
-        for (RobotInfo ally : allies) {
-            if (ally.paintAmount < ally.getType().paintCapacity &&
-                    rc.canTransferPaint(ally.location, 10)) {
-                rc.transferPaint(ally.location, 10);
-                return;
-            }
-        }
-
-        Direction moveDir = getVShapeDirection(rc);
-        if (turnCount % 6 == 0) {
-            moveDir = getSweepDirection(rc); // Alternate to sweeping every 6th round
-        }
-        if (rc.canMove(moveDir)) {
-            rc.move(moveDir);
-        }
     }
 
     public static void runSplasher(RobotController rc) throws GameActionException {
-        MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
-        MapInfo currentTile = rc.senseMapInfo(rc.getLocation());
-        if (!currentTile.getPaint().isAlly() && rc.canAttack(rc.getLocation())) {
-            rc.attack(rc.getLocation());
+        Direction moveDir = getVShapeDirection(rc);
+
+        if (!rc.canMove(moveDir)) {
+            moveDir = getWallFollowDirection(rc, moveDir);
         }
 
-        Direction moveDir = getVShapeDirection(rc);
-        if (turnCount % 6 == 0) {
-            moveDir = getSweepDirection(rc); // Alternate to sweeping every 6th round
-        }
         if (rc.canMove(moveDir)) {
             rc.move(moveDir);
         }
-    }
 
-    private static void moveToNearestTower(RobotController rc) throws GameActionException {
-        RobotInfo[] nearbyTowers = rc.senseNearbyRobots(-1, rc.getTeam());
-        MapLocation nearestTower = null;
-        int minDistance = Integer.MAX_VALUE;
-
-        for (RobotInfo robot : nearbyTowers) {
-            if (isTower(robot.getType())) {
-                int distance = rc.getLocation().distanceSquaredTo(robot.location);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearestTower = robot.location;
-                }
+        // Splash attacking
+        RobotInfo[] nearbyEnemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        for (RobotInfo enemy : nearbyEnemies) {
+            if (rc.canAttack(enemy.location)) {
+                rc.attack(enemy.location);
+                return;
             }
         }
-
-        if (nearestTower != null) {
-            Direction dir = rc.getLocation().directionTo(nearestTower);
-            if (rc.canMove(dir)) {
-                rc.move(dir);
-            }
-        }
-    }
-
-    private static boolean isTower(UnitType type) {
-        return switch (type) {
-            case LEVEL_ONE_PAINT_TOWER, LEVEL_TWO_PAINT_TOWER, LEVEL_THREE_PAINT_TOWER,
-                 LEVEL_ONE_MONEY_TOWER, LEVEL_TWO_MONEY_TOWER, LEVEL_THREE_MONEY_TOWER,
-                 LEVEL_ONE_DEFENSE_TOWER, LEVEL_TWO_DEFENSE_TOWER, LEVEL_THREE_DEFENSE_TOWER -> true;
-            default -> false;
-        };
     }
 
     private static Direction getVShapeDirection(RobotController rc) {
         MapLocation myLocation = rc.getLocation();
         int mapWidth = rc.getMapWidth();
         int mapHeight = rc.getMapHeight();
-        Random rand = new Random();
 
         // Middle bottom: move top-left and top-right
         if (myLocation.x == mapWidth / 2 && myLocation.y == mapHeight - 1) {
-            return rand.nextBoolean() ? Direction.NORTHWEST : Direction.NORTHEAST;
+            return rng.nextBoolean() ? Direction.NORTHWEST : Direction.NORTHEAST;
         }
         // Middle top: move bottom-left and bottom-right
         else if (myLocation.x == mapWidth / 2 && myLocation.y == 0) {
-            return rand.nextBoolean() ? Direction.SOUTHWEST : Direction.SOUTHEAST;
+            return rng.nextBoolean() ? Direction.SOUTHWEST : Direction.SOUTHEAST;
         }
         // Middle left: move top-right and bottom-right
         else if (myLocation.x == 0 && myLocation.y == mapHeight / 2) {
-            return rand.nextBoolean() ? Direction.NORTHEAST : Direction.SOUTHEAST;
+            return rng.nextBoolean() ? Direction.NORTHEAST : Direction.SOUTHEAST;
         }
         // Middle right: move top-left and bottom-left
         else if (myLocation.x == mapWidth - 1 && myLocation.y == mapHeight / 2) {
-            return rand.nextBoolean() ? Direction.NORTHWEST : Direction.SOUTHWEST;
+            return rng.nextBoolean() ? Direction.NORTHWEST : Direction.SOUTHWEST;
         }
 
         // Fallback: Random direction
-        return directions[rand.nextInt(directions.length)];
+        return directions[rng.nextInt(directions.length)];
     }
 
-    private static Direction getSweepDirection(RobotController rc) {
-        MapLocation myLocation = rc.getLocation();
-        int mapWidth = rc.getMapWidth();
-        int mapHeight = rc.getMapHeight();
+    private static Direction getWallFollowDirection(RobotController rc, Direction initialDir) throws GameActionException {
+        for (Direction dir : directions) {
+            if (rc.canMove(dir)) {
+                return dir;
+            }
+        }
+        return initialDir; // If no alternative direction, return the initial
+    }
 
-        // Determine sweeping based on spawn area
-        if (myLocation.x == mapWidth / 2) {
-            return rng.nextBoolean() ? Direction.EAST : Direction.WEST;
-        } else if (myLocation.y == mapHeight / 2) {
-            return rng.nextBoolean() ? Direction.NORTH : Direction.SOUTH;
+    private static MapLocation findNearestUnexploredTile(RobotController rc) throws GameActionException {
+        Queue<MapLocation> toExplore = new LinkedList<>();
+        Set<MapLocation> visited = new HashSet<>();
+        toExplore.add(rc.getLocation());
+
+        while (!toExplore.isEmpty()) {
+            MapLocation current = toExplore.poll();
+            if (!visited.contains(current)) {
+                visited.add(current);
+
+                MapInfo mapInfo = rc.senseMapInfo(current);
+                if (mapInfo.getPaint() == PaintType.EMPTY) {
+                    return current;
+                }
+
+                for (Direction dir : directions) {
+                    MapLocation neighbor = current.add(dir);
+                    if (!visited.contains(neighbor)) {
+                        toExplore.add(neighbor);
+                    }
+                }
+            }
         }
 
-        return directions[rng.nextInt(directions.length)]; // Random fallback
+        return null; // No unexplored tile found
     }
 }

@@ -45,14 +45,12 @@ public class RobotPlayer {
                     } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
                     }
-                } else if (round < 1500) {
+                } else if (round < 1000) {
                     if (rng.nextDouble() < 0.6 && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                         rc.buildRobot(UnitType.SPLASHER, nextLoc);
                     } else if (rc.canBuildRobot(UnitType.MOPPER, nextLoc)) {
                         rc.buildRobot(UnitType.MOPPER, nextLoc);
                     }
-                } else if (rng.nextDouble() < 0.15 && rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
-                    rc.buildRobot(UnitType.SPLASHER, nextLoc);
                 } else if (rc.canBuildRobot(UnitType.SPLASHER, nextLoc)) {
                     rc.buildRobot(UnitType.SPLASHER, nextLoc);
                 }
@@ -70,12 +68,53 @@ public class RobotPlayer {
 
     public static void runSoldier(RobotController rc) throws GameActionException {
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
+        // Search for a nearby ruin to complete ONLY IF EARLY ROUNDS
+        if (rc.getRoundNum() < 500) {
+            MapInfo curRuin = null;
+            for (MapInfo tile : nearbyTiles){
+                if (tile.hasRuin()){
+                    curRuin = tile;
+                }
+            }
+            if (curRuin != null){
+                MapLocation targetLoc = curRuin.getMapLocation();
+                Direction dir = rc.getLocation().directionTo(targetLoc);
+                if (rc.canMove(dir))
+                    rc.move(dir);
+                // Mark the pattern we need to draw to build a tower here if we haven't already.
+                MapLocation shouldBeMarked = curRuin.getMapLocation().subtract(dir);
+                if (rc.senseMapInfo(shouldBeMarked).getMark() == PaintType.EMPTY && rc.canMarkTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, targetLoc)){
+                    rc.markTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, targetLoc);
+                    System.out.println("Trying to build a tower at " + targetLoc);
+                }
+                // Fill in any spots in the pattern with the appropriate paint.
+                for (MapInfo patternTile : rc.senseNearbyMapInfos(targetLoc, 8)){
+                    if (patternTile.getMark() != patternTile.getPaint() && patternTile.getMark() != PaintType.EMPTY){
+                        boolean useSecondaryColor = patternTile.getMark() == PaintType.ALLY_SECONDARY;
+                        if (rc.canAttack(patternTile.getMapLocation()))
+                            rc.attack(patternTile.getMapLocation(), useSecondaryColor);
+                    }
+                }
+                // Complete the ruin if we can.
+                if (rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, targetLoc)){
+                    rc.completeTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, targetLoc);
+                    rc.setTimelineMarker("Tower built", 0, 255, 0);
+                    System.out.println("Built a tower at " + targetLoc + "!");
+                }
+            }
+        }
         MapInfo currentTile = rc.senseMapInfo(rc.getLocation());
         if (!currentTile.getPaint().isAlly() && rc.canAttack(rc.getLocation())) {
             rc.attack(rc.getLocation());
         }
 
         Direction moveDir = getVShapeDirection(rc);
+
+        // Ricochet
+        if (!rc.canMove(moveDir)) {
+            moveDir = getRicochetDirection(rc, moveDir);
+        }
+
         if (turnCount % 6 == 0) {
             moveDir = getSweepDirection(rc); // Alternate to sweeping every 6th round
         }
@@ -107,6 +146,11 @@ public class RobotPlayer {
         }
 
         Direction moveDir = getVShapeDirection(rc);
+        // Ricochet
+        if (!rc.canMove(moveDir)) {
+            moveDir = getRicochetDirection(rc, moveDir);
+        }
+
         if (turnCount % 6 == 0) {
             moveDir = getSweepDirection(rc); // Alternate to sweeping every 6th round
         }
@@ -123,6 +167,10 @@ public class RobotPlayer {
         }
 
         Direction moveDir = getVShapeDirection(rc);
+        // Ricochet
+        if (!rc.canMove(moveDir)) {
+            moveDir = getRicochetDirection(rc, moveDir);
+        }
         if (turnCount % 6 == 0) {
             moveDir = getSweepDirection(rc); // Alternate to sweeping every 6th round
         }
@@ -203,5 +251,44 @@ public class RobotPlayer {
         }
 
         return directions[rng.nextInt(directions.length)]; // Random fallback
+    }
+
+    private static Direction getRicochetDirection(RobotController rc, Direction currentDirection) {
+        MapLocation currentLocation = rc.getLocation();
+        MapLocation nextLocation = currentLocation.add(currentDirection);
+        int mapWidth = rc.getMapWidth();
+        int mapHeight = rc.getMapHeight();
+
+        // Check if the robot is hitting a boundary
+        if (nextLocation.x >= mapWidth) { // Hitting the right boundary
+            if (currentDirection == Direction.NORTHEAST) {
+                return Direction.NORTHWEST; // Bounce to the left
+            } else if (currentDirection == Direction.SOUTHEAST) {
+                return  Direction.SOUTHWEST; // Bounce to the left
+            }
+        } else if (nextLocation.x <= 0) { // Hitting the left boundary
+            if (currentDirection == Direction.NORTHWEST) {
+                return  Direction.NORTHEAST; // Bounce to the right
+            } else if (currentDirection == Direction.SOUTHWEST) {
+                return Direction.SOUTHEAST; // Bounce to the right
+            }
+        }
+
+        if (nextLocation.y >= mapHeight) { // Hitting the top boundary
+            if (currentDirection == Direction.NORTHEAST) {
+                return Direction.SOUTHEAST; // Bounce downward
+            } else if (currentDirection == Direction.NORTHWEST) {
+                return Direction.SOUTHWEST; // Bounce downward
+            }
+        } else if (nextLocation.y <= 0) { // Hitting the bottom boundary
+            if (currentDirection == Direction.SOUTHEAST) {
+                return Direction.NORTHEAST; // Bounce upward
+            } else if (currentDirection == Direction.SOUTHWEST) {
+                return Direction.NORTHWEST; // Bounce upward
+            }
+        }
+
+        // else, return opposites
+        return currentDirection.opposite();
     }
 }
