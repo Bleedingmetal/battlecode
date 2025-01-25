@@ -64,7 +64,16 @@ public class RobotPlayer {
     public static void runSoldier(RobotController rc) throws GameActionException {
         Direction moveDir = getVShapeDirection(rc);
 
-        if (!rc.canMove(moveDir)) {
+        MapLocation currentLocation = rc.getLocation();
+
+        int mapWidth = rc.getMapWidth();
+        int mapHeight = rc.getMapHeight();
+
+        if (currentLocation.x >= mapWidth || currentLocation.y >= mapHeight || currentLocation.x < 0 || currentLocation.y < 0)  {
+            moveDir = getRicochetDirection(rc, moveDir);
+        }
+
+        else if (!rc.canMove(moveDir)) {
             moveDir = getWallFollowDirection(rc, moveDir);
         }
 
@@ -119,12 +128,18 @@ public class RobotPlayer {
         Direction moveDir = getVShapeDirection(rc);
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
 
-        if (!rc.canMove(moveDir)) {
-            moveDir = getWallFollowDirection(rc, moveDir);
+
+        MapLocation currentLocation = rc.getLocation();
+
+        int mapWidth = rc.getMapWidth();
+        int mapHeight = rc.getMapHeight();
+
+        if (currentLocation.x >= mapWidth || currentLocation.y >= mapHeight || currentLocation.x < 0 || currentLocation.y < 0)  {
+            moveDir = getRicochetDirection(rc, moveDir);
         }
 
-        if (rc.canMove(moveDir)) {
-            rc.move(moveDir);
+        else if (!rc.canMove(moveDir)) {
+            moveDir = getWallFollowDirection(rc, moveDir);
         }
 
         // Mopping logic
@@ -217,8 +232,16 @@ public class RobotPlayer {
 
     public static void runSplasher(RobotController rc) throws GameActionException {
         Direction moveDir = getVShapeDirection(rc);
+        MapLocation currentLocation = rc.getLocation();
 
-        if (!rc.canMove(moveDir)) {
+        int mapWidth = rc.getMapWidth();
+        int mapHeight = rc.getMapHeight();
+
+        if (currentLocation.x >= mapWidth || currentLocation.y >= mapHeight || currentLocation.x < 0 || currentLocation.y < 0)  {
+            moveDir = getRicochetDirection(rc, moveDir);
+        }
+
+        else if (!rc.canMove(moveDir)) {
             moveDir = getWallFollowDirection(rc, moveDir);
         }
         if (turnCount % 6 == 0) {
@@ -243,26 +266,27 @@ public class RobotPlayer {
         MapLocation myLocation = rc.getLocation();
         int mapWidth = rc.getMapWidth();
         int mapHeight = rc.getMapHeight();
+        Random rand = new Random();
 
         // Middle bottom: move top-left and top-right
         if (myLocation.x == mapWidth / 2 && myLocation.y == mapHeight - 1) {
-            return rng.nextBoolean() ? Direction.NORTHWEST : Direction.NORTHEAST;
+            return rand.nextBoolean() ? Direction.NORTHWEST : Direction.NORTHEAST;
         }
         // Middle top: move bottom-left and bottom-right
         else if (myLocation.x == mapWidth / 2 && myLocation.y == 0) {
-            return rng.nextBoolean() ? Direction.SOUTHWEST : Direction.SOUTHEAST;
+            return rand.nextBoolean() ? Direction.SOUTHWEST : Direction.SOUTHEAST;
         }
         // Middle left: move top-right and bottom-right
         else if (myLocation.x == 0 && myLocation.y == mapHeight / 2) {
-            return rng.nextBoolean() ? Direction.NORTHEAST : Direction.SOUTHEAST;
+            return rand.nextBoolean() ? Direction.NORTHEAST : Direction.SOUTHEAST;
         }
         // Middle right: move top-left and bottom-left
         else if (myLocation.x == mapWidth - 1 && myLocation.y == mapHeight / 2) {
-            return rng.nextBoolean() ? Direction.NORTHWEST : Direction.SOUTHWEST;
+            return rand.nextBoolean() ? Direction.NORTHWEST : Direction.SOUTHWEST;
         }
 
         // Fallback: Random direction
-        return directions[rng.nextInt(directions.length)];
+        return directions[rand.nextInt(directions.length)];
     }
 
     private static Direction getWallFollowDirection(RobotController rc, Direction initialDir) throws GameActionException {
@@ -316,5 +340,45 @@ public class RobotPlayer {
         return directions[rng.nextInt(directions.length)]; // Random fallback
     }
 
+    private static Direction getRicochetDirection(RobotController rc, Direction currentDirection) {
+        MapLocation currentLocation = rc.getLocation();
+        MapLocation nextLocation = currentLocation.add(currentDirection);
+        int mapWidth = rc.getMapWidth();
+        int mapHeight = rc.getMapHeight();
+
+        // Check if the robot is hitting a boundary
+        if (nextLocation.x >= mapWidth) { // Hitting the right boundary
+            if (currentDirection == Direction.NORTHEAST) {
+                return Direction.NORTHWEST; // Bounce to the left
+            } else if (currentDirection == Direction.SOUTHEAST) {
+                return  Direction.SOUTHWEST; // Bounce to the left
+            }
+        } else if (nextLocation.x <= 0) { // Hitting the left boundary
+            if (currentDirection == Direction.NORTHWEST) {
+                return  Direction.NORTHEAST; // Bounce to the right
+            } else if (currentDirection == Direction.SOUTHWEST) {
+                return Direction.SOUTHEAST; // Bounce to the right
+            }
+        }
+
+        if (nextLocation.y >= mapHeight) { // Hitting the top boundary
+            if (currentDirection == Direction.NORTHEAST) {
+                return Direction.SOUTHEAST; // Bounce downward
+            } else if (currentDirection == Direction.NORTHWEST) {
+                return Direction.SOUTHWEST; // Bounce downward
+            }
+        } else if (nextLocation.y <= 0) { // Hitting the bottom boundary
+            if (currentDirection == Direction.SOUTHEAST) {
+                return Direction.NORTHEAST; // Bounce upward
+            } else if (currentDirection == Direction.SOUTHWEST) {
+                return Direction.NORTHWEST; // Bounce upward
+            }
+        }
+
+        // else, return opposites
+        return currentDirection.opposite();
+    }
 }
+
+
 
