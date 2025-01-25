@@ -69,7 +69,7 @@ public class RobotPlayer {
     public static void runSoldier(RobotController rc) throws GameActionException {
         MapInfo[] nearbyTiles = rc.senseNearbyMapInfos();
         // Search for a nearby ruin to complete ONLY IF EARLY ROUNDS
-        if (rc.getRoundNum() < 500) {
+        if (rc.getRoundNum() < 2000) {
             MapInfo curRuin = null;
             for (MapInfo tile : nearbyTiles){
                 if (tile.hasRuin()){
